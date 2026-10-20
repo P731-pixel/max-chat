@@ -1,75 +1,156 @@
-# React + TypeScript + Vite
+# MAX Chat — чат на React с интеграцией GREEN-API
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**MAX Chat** — тестовый проект веб-интерфейса чата на React и TypeScript с интеграцией GREEN-API для отправки и получения сообщений.
 
-Currently, two official plugins are available:
+[English version](README.en.md)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Возможности
 
-## React Compiler
+- **Два режима работы:** DEMO для демонстрации интерфейса и REAL для взаимодействия с GREEN-API.
+- **Подключение к GREEN-API:** настройка URL API, `idInstance` и `apiTokenInstance`.
+- **Управление чатами:** создание чатов по номеру телефона и переключение между ними.
+- **Обмен сообщениями:** отправка и отображение сообщений в истории активного чата.
+- **Получение входящих сообщений:** периодический опрос уведомлений GREEN-API в режиме REAL.
+- **Обработка ошибок:** отображение ошибок отправки и возможность повторить неудачную отправку.
+- **Адаптация интерфейса:** чат, список диалогов и панель подключения к API.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Технологический стек
 
-## Expanding the ESLint configuration
+- React
+- TypeScript
+- Vite
+- CSS
+- GREEN-API HTTP API
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Требования
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Перед запуском установите:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js — актуальную LTS-версию.
+- npm — устанавливается вместе с Node.js.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Установка и запуск
 
+### 1. Клонирование репозитория
+
+```bash
+git clone https://github.com/account-name/max-chat.git
+cd max-chat
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Замените `account-name` на имя вашего пользователя GitHub, если в адресе репозитория используется другое имя.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 2. Установка зависимостей
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
 ```
+
+### 3. Запуск в режиме разработки
+
+```bash
+npm run dev
+```
+
+Vite выведет локальный адрес приложения в терминал. Откройте его в браузере.
+
+## Проверка проекта
+
+Проверка TypeScript:
+
+```bash
+npx tsc --noEmit
+```
+
+Сборка приложения:
+
+```bash
+npm run build
+```
+
+Предварительный просмотр production-сборки:
+
+```bash
+npm run preview
+```
+
+## Режимы работы
+
+### DEMO
+
+Демонстрационный режим позволяет проверить интерфейс без подключения к реальному экземпляру GREEN-API.
+
+В этом режиме можно создавать чаты, отправлять тестовые сообщения и видеть имитацию ответа. Демонстрационные ответы не являются сообщениями реального собеседника.
+
+### REAL
+
+Реальный режим использует GREEN-API для отправки сообщений и получения входящих уведомлений.
+
+Для подключения укажите параметры своего экземпляра GREEN-API:
+
+- **API URL** — адрес API.
+- **ID Instance** — идентификатор экземпляра.
+- **API Token** — токен доступа.
+
+Работа REAL-режима зависит от доступности API, состояния экземпляра и корректности указанных данных.
+
+## Структура проекта
+
+```text
+max-chat/
+├── src/
+│   ├── services/
+│   │   ├── chatService.ts
+│   │   └── greenApi.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+├── .gitignore
+├── index.html
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+- `App.tsx` — основной интерфейс и управление состоянием приложения.
+- `index.css` — стили интерфейса.
+- `greenApi.ts` — HTTP-взаимодействие с GREEN-API.
+- `chatService.ts` — обработка сообщений и входящих уведомлений.
+- `main.tsx` — точка входа React-приложения.
+
+## Ограничения текущей версии
+
+- История сообщений хранится в оперативной памяти и не сохраняется после перезагрузки страницы.
+- Ответы в режиме DEMO имитируются.
+- Основной сценарий обмена сообщениями ориентирован на текст.
+- Работа с реальными сообщениями требует доступного и настроенного экземпляра GREEN-API.
+- Проект предназначен прежде всего для обучения и демонстрации интеграции.
+
+## Безопасность
+
+В текущей архитектуре браузер взаимодействует с GREEN-API напрямую. Поэтому идентификатор экземпляра и токен могут быть доступны пользователю браузера через инструменты разработчика и сетевые запросы.
+
+**Не используйте эту архитектуру без изменений в публичном production-приложении.**
+
+Для промышленного использования рекомендуется вынести работу с GREEN-API на backend, хранить секреты в переменных окружения или защищённом хранилище и реализовать серверную авторизацию, проверку входных данных и контроль доступа.
+
+Не публикуйте реальные токены и другие секреты в GitHub.
+
+## Возможные направления развития
+
+- Сохранение чатов и сообщений в базе данных.
+- Авторизация пользователей.
+- Backend-прокси для безопасной работы с GREEN-API.
+- Пагинация истории сообщений.
+- Улучшение обработки ошибок и повторных попыток.
+- Автоматизированные тесты.
+- Развёртывание приложения и CI/CD.
+
+## Лицензия
+
+Лицензия проекта пока не указана. Перед повторным использованием или распространением кода уточните условия лицензирования.
+
+---
+
+**Статус:** тестовый проект в процессе развития.
