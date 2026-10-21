@@ -30,6 +30,9 @@ export type GreenApiNotification = {
             textMessageData?: {
                 textMessage?: string
             }
+            deletedMessageData?: {
+                stanzaId?: string
+            }
         }
     }
 }

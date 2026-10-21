@@ -1,22 +1,23 @@
-import { useEffect, useState } from 'react'
-import './index.css'
+import { useEffect, useState } from "react";
+import "./index.css";
 
-import { checkAccount, type GreenApiCredentials } from './services/greenApi'
+import { checkAccount, type GreenApiCredentials } from "./services/greenApi";
 
 import {
   receiveChatNotification,
   sendChatMessage,
   type ChatMessage,
-} from './services/chatService'
+  type ChatNotification,
+} from "./services/chatService";
 
-import type { Chat } from './services/chatTypes'
+import type { Chat } from "./services/chatTypes";
 
 import {
   loadChats,
   loadMessages,
   saveChats,
   saveMessages,
-} from './services/storageService'
+} from "./services/storageService";
 
 function App() {
   const [idInstance, setIdInstance] = useState("");
@@ -34,7 +35,6 @@ function App() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
-
 
   const credentials: GreenApiCredentials = {
     idInstance,
@@ -71,6 +71,73 @@ function App() {
     setMessageText("");
     setError("");
     setInfo("Подключение остановлено.");
+  }
+
+  function handleNotification(notification: ChatNotification) {
+    switch (notification.type) {
+      case "status": {
+        const { idMessage, status } = notification.data;
+
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === idMessage && message.direction === "outgoing"
+              ? { ...message, status }
+              : message,
+          ),
+        );
+
+        return;
+      }
+
+      case "deleted": {
+        const { idMessage, chatId } = notification.data;
+
+        setMessages((current) => {
+          return current.filter(
+            (message) =>
+              message.id !== idMessage ||
+              (chatId !== undefined && message.chatId !== chatId),
+          );
+        });
+
+        return;
+      }
+
+      case "incoming": {
+        const incoming = notification.data;
+
+        setMessages((current) =>
+          current.some((message) => message.id === incoming.message.id)
+            ? current
+            : [...current, incoming.message],
+        );
+
+        setChats((current) => {
+          const existing = current.find((chat) => chat.id === incoming.chatId);
+
+          if (existing) {
+            return existing.title === incoming.title
+              ? current
+              : current.map((chat) =>
+                  chat.id === incoming.chatId
+                    ? { ...chat, title: incoming.title }
+                    : chat,
+                );
+          }
+
+          return [
+            ...current,
+            {
+              id: incoming.chatId,
+              phone: incoming.phone,
+              title: incoming.title,
+            },
+          ];
+        });
+
+        return;
+      }
+    }
   }
 
   async function createChat() {
@@ -180,57 +247,7 @@ function App() {
           if (!active || controller.signal.aborted) break;
           if (!notification) continue;
 
-          if (notification.type === "status") {
-            const update = notification.data;
-
-            setMessages((current) =>
-              current.map((message) =>
-                message.id === update.idMessage &&
-                message.direction === "outgoing"
-                  ? { ...message, status: update.status }
-                  : message,
-              ),
-            );
-
-            continue;
-          }
-
-          const incoming = notification.data;
-
-          setMessages((current) => {
-            if (current.some((item) => item.id === incoming.message.id)) {
-              return current;
-            }
-
-            return [...current, incoming.message];
-          });
-
-          setChats((current) => {
-            const existing = current.find(
-              (chat) => chat.id === incoming.chatId,
-            );
-
-            if (existing) {
-              if (existing.title === incoming.title) {
-                return current;
-              }
-
-              return current.map((chat) =>
-                chat.id === incoming.chatId
-                  ? { ...chat, title: incoming.title }
-                  : chat,
-              );
-            }
-
-            return [
-              ...current,
-              {
-                id: incoming.chatId,
-                phone: incoming.phone,
-                title: incoming.title,
-              },
-            ];
-          });
+          handleNotification(notification);
         } catch (err) {
           if (!active || controller.signal.aborted) break;
 
