@@ -289,8 +289,8 @@ function App() {
           </div>
         </header>
 
-        <section className="panel">
-          <h2>Подключение</h2>
+        <details className="panel connection-panel">
+          <summary>Подключение GREEN-API</summary>
           <p className="muted">Параметры GREEN-API</p>
 
           <label htmlFor="apiUrl">API URL</label>
@@ -344,7 +344,7 @@ function App() {
 
           {info && <p className="status">{info}</p>}
           {error && <p className="error">{error}</p>}
-        </section>
+        </details>
 
         <section className="panel">
           <h2>Мои чаты</h2>

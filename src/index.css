@@ -35,7 +35,7 @@ button:disabled {
 
 .app {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 320px minmax(0, 1fr);
   width: min(1440px, 100%);
   height: 100vh;
   min-height: 580px;
@@ -45,14 +45,16 @@ button:disabled {
   box-shadow: 0 10px 45px #26364b12;
 }
 
+/* Левая панель */
+
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 24px 20px;
+  gap: 16px;
+  padding: 20px 16px;
   overflow-y: auto;
-  background: #f8faff;
-  border-right: 1px solid #e7ebf2;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
 }
 
 .brand {
@@ -67,7 +69,7 @@ button:disabled {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: white;
+  color: #fff;
   font-size: 25px;
   font-weight: 800;
   background: #4779e5;
@@ -92,11 +94,13 @@ button:disabled {
   font-size: 12px;
 }
 
+/* Карточки и настройки */
+
 .panel {
-  padding: 18px;
-  background: white;
-  border: 1px solid #e7ebf2;
-  border-radius: 16px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #edf0f4;
+  border-radius: 12px;
 }
 
 .panel h2 {
@@ -110,7 +114,7 @@ button:disabled {
   line-height: 1.5;
 }
 
-.panel>.muted {
+.panel > .muted {
   margin: 0 0 18px;
 }
 
@@ -129,13 +133,14 @@ button:disabled {
   min-width: 0;
   padding: 12px;
   color: #263348;
-  background: white;
+  background: #fff;
   border: 1px solid #dfe5ef;
   border-radius: 9px;
   outline: none;
 }
 
 .panel input:focus,
+.panel select:focus,
 .message-form input:focus {
   border-color: #6d91e8;
   box-shadow: 0 0 0 3px #4779e518;
@@ -158,7 +163,7 @@ button:disabled {
 }
 
 .primary-button {
-  color: white;
+  color: #fff;
   background: #4779e5;
 }
 
@@ -199,6 +204,96 @@ button:disabled {
   font-size: 11px;
 }
 
+/* Сворачиваемое подключение GREEN-API */
+
+.connection-panel {
+  padding: 14px;
+}
+
+.connection-panel summary {
+  color: #263348;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.connection-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.connection-panel summary::after {
+  content: "+";
+  float: right;
+  color: #7d899b;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.connection-panel[open] summary {
+  margin-bottom: 14px;
+}
+
+.connection-panel[open] summary::after {
+  content: "−";
+}
+
+.connection-panel > .muted {
+  margin-top: 0;
+}
+
+/* Список чатов */
+
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.chat-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.chat-list-item:hover {
+  background: #f3f6fa;
+}
+
+.chat-list-item.active {
+  background: #edf3ff;
+  border-color: #dce7ff;
+}
+
+.chat-list-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  font-weight: 600;
+  background: #2878d0;
+  border-radius: 50%;
+}
+
+.chat-list-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Нижняя часть боковой панели */
+
 .sidebar-footer {
   display: flex;
   align-items: center;
@@ -218,19 +313,21 @@ button:disabled {
   border-radius: 6px;
 }
 
+/* Окно переписки */
+
 .chat {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #f3f6fb;
+  background: #f5f7fa;
 }
 
 .chat-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 28px;
-  background: white;
+  padding: 18px 24px;
+  background: #fff;
   border-bottom: 1px solid #e8edf4;
 }
 
@@ -249,12 +346,14 @@ button:disabled {
   margin: 5px 0 0;
 }
 
+/* Сообщения */
+
 .messages {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 14px;
-  padding: 28px;
+  padding: 24px;
   overflow-y: auto;
 }
 
@@ -317,7 +416,7 @@ button:disabled {
 
 .incoming {
   align-self: flex-start;
-  background: white;
+  background: #fff;
   border-bottom-left-radius: 4px;
 }
 
@@ -340,12 +439,19 @@ button:disabled {
   color: #4779e5;
 }
 
+.message-failed {
+  color: #d93025;
+  font-weight: 600;
+}
+
+/* Поле ввода */
+
 .message-form {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 24px;
-  background: white;
+  padding: 14px 24px;
+  background: #fff;
   border-top: 1px solid #e8edf4;
 }
 
@@ -354,18 +460,13 @@ button:disabled {
   border-radius: 12px;
 }
 
-.message-failed {
-  color: #d93025;
-  font-weight: 600;
-}
-
 .send-button {
   display: grid;
   place-items: center;
   flex-shrink: 0;
   width: 46px;
   height: 46px;
-  color: white;
+  color: #fff;
   font-size: 21px;
   background: #4779e5;
   border: 0;
@@ -374,16 +475,15 @@ button:disabled {
 
 .retry-button {
   padding: 2px 6px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
   color: #d93025;
   font: inherit;
-  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
 }
 
 .retry-button:hover {
-  background: rgba(217, 48, 37, 0.1);
+  background: #d930251a;
 }
 
 .retry-button:disabled {
@@ -391,79 +491,15 @@ button:disabled {
   opacity: 0.5;
 }
 
-
 .chat-footer {
   padding: 0 20px 12px;
   color: #909bad;
   font-size: 10px;
   text-align: center;
-  background: white;
+  background: #fff;
 }
 
-.panel select {
-  width: 100%;
-  padding: 12px;
-  color: #263348;
-  background: white;
-  border: 1px solid #dfe5ef;
-  border-radius: 9px;
-  outline: none;
-}
-
-.panel select:focus {
-  border-color: #6d91e8;
-}
-
-
-.chat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.chat-list-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.chat-list-item:hover {
-  background: rgba(128, 128, 128, 0.12);
-}
-
-.chat-list-item.active {
-  background: rgba(50, 130, 220, 0.14);
-  border-color: rgba(50, 130, 220, 0.4);
-}
-
-.chat-list-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #2878d0;
-  color: white;
-  font-weight: 600;
-}
-
-.chat-list-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* Мобильная версия */
 
 @media (max-width: 760px) {
   .app {
