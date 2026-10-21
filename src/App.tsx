@@ -1,49 +1,52 @@
-import { useEffect, useState } from "react";
-import "./index.css";
+import { useEffect, useState } from 'react'
+import './index.css'
+
+import { checkAccount, type GreenApiCredentials } from './services/greenApi'
 
 import {
-  checkAccount,
-  GreenApiError,
-  type GreenApiCredentials,
-} from "./services/greenApi";
-
-import {
-  createDemoMessage,
-  receiveIncomingText,
+  receiveChatNotification,
   sendChatMessage,
   type ChatMessage,
-  type ChatMode,
-} from "./services/chatService";
+} from './services/chatService'
 
-import type { Chat } from "./services/chatTypes";
+import type { Chat } from './services/chatTypes'
+
+import {
+  loadChats,
+  loadMessages,
+  saveChats,
+  saveMessages,
+} from './services/storageService'
 
 function App() {
   const [idInstance, setIdInstance] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [apiUrl, setApiUrl] = useState("https://api.green-api.com");
 
-  const [mode, setMode] = useState<ChatMode>("demo");
   const [connected, setConnected] = useState(false);
 
-  const [phone, setPhone] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [chatId, setChatId] = useState("");
-  const [chats, setChats] = useState<Chat[]>([]);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const visibleMessages = messages.filter(
-    (message) => message.chatId === chatId,
-  );
+  const [chats, setChats] = useState<Chat[]>(() => loadChats());
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages());
   const [messageText, setMessageText] = useState("");
 
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
 
+
   const credentials: GreenApiCredentials = {
     idInstance,
     apiTokenInstance: apiToken,
     apiUrl,
   };
+
+  const activeChat = chats.find((chat) => chat.id === chatId);
+
+  const visibleMessages = messages.filter(
+    (message) => message.chatId === chatId,
+  );
 
   function connect() {
     setError("");
@@ -56,14 +59,18 @@ function App() {
 
     setConnected(true);
     setChatId("");
-    setPhone("");
-    setMessages([]);
+    setNewPhone("");
 
-    setInfo(
-      mode === "demo"
-        ? "Демо-режим активирован. Сообщения тестовые."
-        : "Параметры сохранены. Реальная проверка выполнится при создании чата.",
-    );
+    setInfo("Подключение настроено. Введите номер телефона получателя.");
+  }
+
+  function disconnect() {
+    setConnected(false);
+    setChatId("");
+    setNewPhone("");
+    setMessageText("");
+    setError("");
+    setInfo("Подключение остановлено.");
   }
 
   async function createChat() {
@@ -72,38 +79,35 @@ function App() {
     setError("");
     setInfo("");
 
-    const normalizedPhone = phone.replace(/\D/g, "");
+    const phone = newPhone.trim();
 
-    if (normalizedPhone.length < 10) {
-      setError("Введите корректный номер телефона.");
+    if (!phone) {
+      setError("Введите номер телефона получателя.");
       return;
     }
 
     setBusy(true);
 
     try {
-      let newChat: Chat;
+      const result = await checkAccount(credentials, phone);
 
-      if (mode === "demo") {
-        newChat = {
-          id: `demo-${normalizedPhone}`,
-          phone: normalizedPhone,
-          title: normalizedPhone,
-        };
-      } else {
-        const result = await checkAccount(credentials, normalizedPhone);
+      const existing = chats.find((chat) => chat.id === result.chatId);
 
-        newChat = {
-          id: result.chatId!,
-          phone: normalizedPhone,
-          title: normalizedPhone,
-        };
+      if (existing) {
+        setChatId(existing.id);
+        setNewPhone("");
+        setInfo("Этот чат уже существует. Он открыт.");
+        return;
       }
 
-      setChats((current) => {
-        const existing = current.find((chat) => chat.id === newChat.id);
+      const newChat: Chat = {
+        id: result.chatId!,
+        phone,
+        title: phone,
+      };
 
-        if (existing) {
+      setChats((current) => {
+        if (current.some((chat) => chat.id === newChat.id)) {
           return current;
         }
 
@@ -111,17 +115,10 @@ function App() {
       });
 
       setChatId(newChat.id);
-      setPhone(newChat.phone);
-
-      setInfo(
-        mode === "demo"
-          ? "Демо-чат создан."
-          : "Аккаунт MAX найден. Чат создан.",
-      );
+      setNewPhone("");
+      setInfo("Чат создан. Теперь можно отправлять сообщения.");
     } catch (err) {
-      setError(
-        err instanceof GreenApiError ? err.message : "Не удалось создать чат.",
-      );
+      setError(err instanceof Error ? err.message : "Не удалось создать чат.");
     } finally {
       setBusy(false);
     }
@@ -138,34 +135,14 @@ function App() {
     setBusy(true);
 
     try {
-      const outgoing = await sendChatMessage(
-        { mode, credentials },
-        currentChatId,
-        text,
-      );
+      const outgoing = await sendChatMessage(credentials, currentChatId, text);
 
       setMessages((current) => [...current, outgoing]);
       setMessageText("");
-
-      if (mode === "demo") {
-        window.setTimeout(() => {
-          setMessages((current) => [
-            ...current,
-            {
-              ...createDemoMessage(
-                `Демо-ответ на сообщение: ${text}`,
-                "incoming",
-              ),
-              chatId: currentChatId,
-            },
-          ]);
-        }, 1200);
-      }
     } catch (err) {
-      const errorText =
-        err instanceof Error ? err.message : "Не удалось отправить сообщение.";
-
-      setError(errorText);
+      setError(
+        err instanceof Error ? err.message : "Не удалось отправить сообщение.",
+      );
 
       setMessages((current) => [
         ...current,
@@ -187,7 +164,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (!connected || mode !== "real") return;
+    if (!connected) return;
 
     let active = true;
     const controller = new AbortController();
@@ -195,40 +172,65 @@ function App() {
     async function pollNotifications() {
       while (active) {
         try {
-          const incoming = await receiveIncomingText(
+          const notification = await receiveChatNotification(
             credentials,
             controller.signal,
           );
 
-          if (!active || controller.signal.aborted)
-            break;
+          if (!active || controller.signal.aborted) break;
+          if (!notification) continue;
 
-          if (incoming) {
-            setMessages((current) => {
-              if (current.some((item) => item.id === incoming.message.id)) {
+          if (notification.type === "status") {
+            const update = notification.data;
+
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === update.idMessage &&
+                message.direction === "outgoing"
+                  ? { ...message, status: update.status }
+                  : message,
+              ),
+            );
+
+            continue;
+          }
+
+          const incoming = notification.data;
+
+          setMessages((current) => {
+            if (current.some((item) => item.id === incoming.message.id)) {
+              return current;
+            }
+
+            return [...current, incoming.message];
+          });
+
+          setChats((current) => {
+            const existing = current.find(
+              (chat) => chat.id === incoming.chatId,
+            );
+
+            if (existing) {
+              if (existing.title === incoming.title) {
                 return current;
               }
 
-              return [...current, incoming.message];
-            });
-
-            setChats((current) => {
-              const existing = current.find(
-                (chat) => chat.id === incoming.chatId,
+              return current.map((chat) =>
+                chat.id === incoming.chatId
+                  ? { ...chat, title: incoming.title }
+                  : chat,
               );
+            }
 
-              if (existing) return current;
-
-              return [
-                ...current,
-                {
-                  id: incoming.chatId,
-                  phone: incoming.phone,
-                  title: incoming.phone,
-                },
-              ];
-            });
-          }
+            return [
+              ...current,
+              {
+                id: incoming.chatId,
+                phone: incoming.phone,
+                title: incoming.title,
+              },
+            ];
+          });
         } catch (err) {
           if (!active || controller.signal.aborted) break;
 
@@ -249,7 +251,15 @@ function App() {
       active = false;
       controller.abort();
     };
-  }, [connected, mode, idInstance, apiToken, apiUrl]);
+  }, [connected, idInstance, apiToken, apiUrl]);
+
+  useEffect(() => {
+    saveChats(chats);
+  }, [chats]);
+
+  useEffect(() => {
+    saveMessages(messages);
+  }, [messages]);
 
   return (
     <main className="app">
@@ -258,33 +268,13 @@ function App() {
           <div className="brand-icon">M</div>
           <div>
             <h1>MAX Chat</h1>
-            <span>GREEN-API integration</span>
+            <span>MAX · GREEN-API</span>
           </div>
         </header>
 
         <section className="panel">
           <h2>Подключение</h2>
           <p className="muted">Параметры GREEN-API</p>
-
-          <label htmlFor="mode">Режим работы</label>
-          <select
-            id="mode"
-            value={mode}
-            onChange={(event) => {
-              setMode(event.target.value as ChatMode);
-              setConnected(false);
-              setChatId("");
-              setPhone("");
-              setChats([]);
-              setMessages([]);
-              setMessageText("");
-              setError("");
-              setInfo("");
-            }}
-          >
-            <option value="demo">DEMO — тестовый режим</option>
-            <option value="real">REAL — настоящий API</option>
-          </select>
 
           <label htmlFor="apiUrl">API URL</label>
           <input
@@ -329,16 +319,7 @@ function App() {
             <button
               className="secondary-button"
               type="button"
-              onClick={() => {
-                setConnected(false);
-                setChatId("");
-                setPhone("");
-                setChats([]);
-                setMessages([]);
-                setMessageText("");
-                setInfo("Подключение остановлено.");
-                setError("");
-              }}
+              onClick={disconnect}
             >
               Отключиться
             </button>
@@ -352,7 +333,7 @@ function App() {
           <h2>Мои чаты</h2>
 
           {chats.length === 0 ? (
-            <p className="muted">Пока нет созданных чатов.</p>
+            <p className="muted">Пока нет чатов.</p>
           ) : (
             <div className="chat-list">
               {chats.map((chat) => (
@@ -364,13 +345,12 @@ function App() {
                   }`}
                   onClick={() => {
                     setChatId(chat.id);
-                    setPhone(chat.phone);
                     setError("");
                     setInfo("");
                   }}
                 >
                   <span className="chat-list-avatar">
-                    {chat.phone.slice(-2)}
+                    {chat.title.slice(-2)}
                   </span>
                   <span className="chat-list-title">{chat.title}</span>
                 </button>
@@ -380,42 +360,46 @@ function App() {
         </section>
 
         <section className="panel">
-          <h2>Новый чат</h2>
+          <h2>Создать чат</h2>
 
-          <label htmlFor="phone">Номер телефона получателя</label>
+          <label htmlFor="newPhone">Номер телефона получателя</label>
           <input
-            id="phone"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="Например, 79001234567"
+            id="newPhone"
+            type="tel"
+            value={newPhone}
+            onChange={(event) => setNewPhone(event.target.value)}
+            placeholder="+79991234567"
+            autoComplete="tel"
             disabled={!connected || busy}
           />
+
+          <p className="muted">Укажите номер в международном формате.</p>
 
           <button
             className="secondary-button"
             type="button"
             onClick={() => void createChat()}
-            disabled={!connected || busy}
+            disabled={!connected || busy || !newPhone.trim()}
           >
             {busy ? "Обработка..." : "Создать чат"}
           </button>
         </section>
 
         <div className="sidebar-footer">
-          <span className="demo-badge">
-            {mode === "demo" ? "DEMO" : "REAL"}
-          </span>
-          <span>{mode === "demo" ? "Сообщения тестовые" : "GREEN-API"}</span>
+          <span className="demo-badge">REAL</span>
+          <span>MAX через GREEN-API</span>
         </div>
       </aside>
 
       <section className="chat">
         <header className="chat-header">
-          <div className="avatar">{phone ? phone.slice(-2) : "?"}</div>
+          <div className="avatar">
+            {activeChat ? activeChat.title.slice(-2) : "?"}
+          </div>
           <div>
-            <h2>{phone || "Выберите собеседника"}</h2>
+            <h2>{activeChat?.title ?? "Выберите собеседника"}</h2>
             <p className="muted">
-              {chatId ? "Текстовые сообщения" : "Чат ещё не создан"}
+              {chatId ? "MAX · Текстовые сообщения" : "Чат не выбран"}
             </p>
           </div>
         </header>
@@ -425,18 +409,14 @@ function App() {
             <div className="empty-state">
               <div className="empty-icon">M</div>
               <h2>Ваши сообщения</h2>
-              <p>Подключитесь и создайте чат, чтобы начать переписку.</p>
+              <p>Подключитесь и создайте чат по номеру телефона.</p>
             </div>
           )}
 
           {chatId && visibleMessages.length === 0 && (
             <div className="empty-chat">
-              <p>Чат создан</p>
-              <span>
-                {mode === "demo"
-                  ? "Отправьте тестовое сообщение."
-                  : "Ожидайте сообщения или отправьте первое."}
-              </span>
+              <p>Чат открыт</p>
+              <span>Ожидайте входящее сообщение или отправьте первое.</span>
             </div>
           )}
 
@@ -445,10 +425,10 @@ function App() {
               <div className="message-text">{message.text}</div>
               <div className="message-meta">
                 {message.time}
-                {message.status === "demo" && <span>DEMO</span>}
                 {message.status === "sent" && <span>✓ Отправлено</span>}
+                {message.status === "delivered" && <span>✓✓ Доставлено</span>}
+                {message.status === "read" && <span>✓✓ Прочитано</span>}
                 {message.status === "received" && <span>Входящее</span>}
-
                 {message.status === "failed" && (
                   <button
                     type="button"
@@ -456,10 +436,6 @@ function App() {
                     disabled={busy}
                     onClick={() => {
                       setChatId(message.chatId ?? "");
-                      setPhone(
-                        chats.find((chat) => chat.id === message.chatId)
-                          ?.phone ?? "",
-                      );
                       setMessageText(message.text);
                       setError("");
                     }}
@@ -500,9 +476,7 @@ function App() {
         </form>
 
         <footer className="chat-footer">
-          {mode === "demo"
-            ? "DEMO — сообщения не отправляются в MAX"
-            : "GREEN-API — реальный режим"}
+          Реальный режим · MAX через GREEN-API
         </footer>
       </section>
     </main>

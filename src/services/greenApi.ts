@@ -13,8 +13,17 @@ export type GreenApiNotification = {
     receiptId: number
     body: {
         typeWebhook?: string
+        idMessage?: string
+        chatId?: string
+        status?: 'sent' | 'delivered' | 'read' | 'failed' | 'noAccount'
+        description?: string
         senderData?: {
             chatId?: string
+            chatType?: string
+            senderType?: string
+            chatName?: string
+            senderName?: string
+            senderPhoneNumber?: string
         }
         messageData?: {
             typeMessage?: string
@@ -208,7 +217,7 @@ export async function checkAccount(
 
     if (!result.exist || !result.chatId) {
         throw new GreenApiError(
-            'Аккаунт MAX для этого номера не найден.',
+            'Аккаунт MAX для этого номера не найден или номер скрыт настройками приватности.',
         )
     }
 

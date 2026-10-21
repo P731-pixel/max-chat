@@ -4,10 +4,15 @@ import {
     receiveNotification,
     deleteNotification,
     type GreenApiCredentials,
-    type GreenApiNotification
+    type GreenApiNotification,
 } from './greenApi'
 
-export type ChatMode = 'demo' | 'real'
+export type MessageStatus =
+    | 'sent'
+    | 'delivered'
+    | 'read'
+    | 'received'
+    | 'failed'
 
 export type ChatMessage = {
     id: string
@@ -15,19 +20,25 @@ export type ChatMessage = {
     text: string
     direction: 'outgoing' | 'incoming'
     time: string
-    status: 'sent' | 'received' | 'demo' | 'failed'
-}
-
-export type ChatConfig = {
-    mode: ChatMode
-    credentials: GreenApiCredentials
+    status: MessageStatus
 }
 
 export type IncomingTextMessage = {
     chatId: string
     phone: string
+    title: string
     message: ChatMessage
 }
+
+export type MessageStatusUpdate = {
+    idMessage: string
+    status: MessageStatus
+    chatId?: string
+}
+
+export type ChatNotification =
+    | { type: 'incoming'; data: IncomingTextMessage }
+    | { type: 'status'; data: MessageStatusUpdate }
 
 export function formatTime(): string {
     return new Date().toLocaleTimeString('ru-RU', {
@@ -36,36 +47,12 @@ export function formatTime(): string {
     })
 }
 
-export function createDemoMessage(
-    text: string,
-    direction: 'outgoing' | 'incoming',
-): ChatMessage {
-    return {
-        id: `${Date.now()}-${Math.random()}`,
-        text,
-        direction,
-        time: formatTime(),
-        status: 'demo',
-    }
-}
-
 export async function sendChatMessage(
-    config: ChatConfig,
+    credentials: GreenApiCredentials,
     chatId: string,
     text: string,
 ): Promise<ChatMessage> {
-    if (config.mode === 'demo') {
-        return {
-            ...createDemoMessage(text, 'outgoing'),
-            chatId
-        }
-    }
-
-    const result = await sendGreenApiMessage(
-        config.credentials,
-        chatId,
-        text,
-    )
+    const result = await sendGreenApiMessage(credentials, chatId, text)
 
     return {
         id: result.idMessage,
@@ -77,58 +64,88 @@ export async function sendChatMessage(
     }
 }
 
-export async function receiveIncomingText(
+export async function receiveChatNotification(
     credentials: GreenApiCredentials,
     signal?: AbortSignal,
-): Promise<IncomingTextMessage | null> {
-    const notification = await receiveNotification(credentials)
+): Promise<ChatNotification | null> {
+    const notification = await receiveNotification(credentials, signal)
 
-    if (!notification) {
+    if (!notification || signal?.aborted) {
         return null
     }
 
-    if (signal?.aborted) {
-        return null;
-    }
-
     try {
-        return parseIncomingText(notification)
+        return parseNotification(notification)
     } finally {
         if (!signal?.aborted) {
-            await deleteNotification(credentials, notification.receiptId);
+            await deleteNotification(credentials, notification.receiptId)
         }
     }
 }
 
-function parseIncomingText(
+function parseNotification(
     notification: GreenApiNotification,
-): IncomingTextMessage | null {
+): ChatNotification | null {
     const body = notification.body
+
+    if (body.typeWebhook === 'outgoingMessageStatus') {
+        const idMessage = body.idMessage
+        const status = body.status
+
+        if (
+            !idMessage ||
+            !status ||
+            !['sent', 'delivered', 'read', 'failed'].includes(status)
+        ) {
+            return null
+        }
+
+        return {
+            type: 'status',
+            data: {
+                idMessage,
+                status: status as MessageStatus,
+                chatId: body.chatId,
+            },
+        }
+    }
 
     if (
         body.typeWebhook !== 'incomingMessageReceived' ||
+        body.senderData?.chatType !== 'user' ||
         body.messageData?.typeMessage !== 'textMessage'
     ) {
         return null
     }
 
     const text = body.messageData.textMessageData?.textMessage
-    const chatId = body.senderData?.chatId
+    const chatId = body.senderData.chatId
 
     if (!text?.trim() || !chatId) {
         return null
     }
 
+    const title =
+        body.senderData.chatName ||
+        body.senderData.senderName ||
+        chatId
+
     return {
-        chatId,
-        phone: chatId.split('@')[0],
-        message: {
-            id: `incoming-${notification.receiptId}`,
+        type: 'incoming',
+        data: {
             chatId,
-            text,
-            direction: 'incoming',
-            time: formatTime(),
-            status: 'received',
+            phone: body.senderData.senderPhoneNumber
+                ? String(body.senderData.senderPhoneNumber)
+                : chatId,
+            title,
+            message: {
+                id: `incoming-${notification.receiptId}`,
+                chatId,
+                text,
+                direction: 'incoming',
+                time: formatTime(),
+                status: 'received',
+            },
         },
     }
 }
